@@ -1,0 +1,27 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="#2563EB"/>
+  
+  <!-- Bridge Icon -->
+  <g transform="translate(192, 256)">
+    <!-- Bridge deck -->
+    <rect x="0" y="320" width="640" height="64" rx="8" fill="white"/>
+    
+    <!-- Left pillar -->
+    <rect x="80" y="192" width="64" height="192" rx="8" fill="white"/>
+    
+    <!-- Right pillar -->
+    <rect x="496" y="192" width="64" height="192" rx="8" fill="white"/>
+    
+    <!-- Arch/cables -->
+    <path d="M112 192 Q 320 0 528 192" stroke="white" stroke-width="32" fill="none" stroke-linecap="round"/>
+    
+    <!-- Vertical cables -->
+    <line x1="192" y1="128" x2="192" y2="320" stroke="white" stroke-width="16" stroke-linecap="round"/>
+    <line x1="320" y1="64" x2="320" y2="320" stroke="white" stroke-width="16" stroke-linecap="round"/>
+    <line x1="448" y1="128" x2="448" y2="320" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  
+  <!-- "OB" text -->
+  <text x="512" y="720" font-family="system-ui, -apple-system, sans-serif" font-size="160" font-weight="700" fill="white" text-anchor="middle">OB</text>
+</svg>
