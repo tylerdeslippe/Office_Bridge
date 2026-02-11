@@ -21,7 +21,7 @@ export const STORES = {
   USER_SETTINGS: 'user_settings',
 } as const;
 
-type StoreName = typeof STORES[keyof typeof STORES];
+export type StoreName = typeof STORES[keyof typeof STORES];
 
 interface SyncQueueItem {
   id: string;

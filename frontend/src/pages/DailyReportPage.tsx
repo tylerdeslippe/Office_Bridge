@@ -2,17 +2,15 @@
  * Daily Report - HVAC Contractor Optimized
  * PROJECT | DATE | FOREMAN | LEVEL/AREA | CREW | EQUIPMENT | WORK SUMMARY | PROBLEMS | RFI
  */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
   Users,
-  Wrench,
   AlertTriangle,
   Camera,
   Check,
-  Minus,
   Plus,
   X,
   Save,
