@@ -1,40 +1,34 @@
 # Office Bridge Backend Dependencies
 # Install with: pip install -r requirements.txt
+# Note: For Python 3.13, use: pip install -r requirements.txt --only-binary :all:
 
 # Core Framework
-fastapi==0.109.2
-uvicorn[standard]==0.27.1
-python-multipart==0.0.9
+fastapi
+uvicorn[standard]
+python-multipart
 
 # Database
-sqlalchemy==2.0.25
-alembic==1.13.1
-aiosqlite==0.19.0
+sqlalchemy
+alembic
+aiosqlite
 
 # Authentication
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
+python-jose[cryptography]
+passlib[bcrypt]
 
 # File Handling
-pillow==10.2.0
-python-magic==0.4.27
+pillow
 
 # Cloud Storage (optional, for S3/Spaces)
-boto3==1.34.0
+boto3
 
 # Validation
-pydantic==2.6.1
-pydantic-settings==2.1.0
-email-validator==2.1.0
+pydantic
+pydantic-settings
+email-validator
 
 # Date/Time
-python-dateutil==2.8.2
+python-dateutil
 
-# Testing
-pytest==8.0.0
-pytest-asyncio==0.23.4
-httpx==0.26.0
-
-# Development
-black==24.1.1
-isort==5.13.2
+# Environment
+python-dotenv
