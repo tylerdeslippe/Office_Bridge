@@ -61,6 +61,7 @@ export function TasksPage() {
   const addTask = async () => {
     if (!newTask.title.trim()) return;
     await tasksService.create({
+      projectId: 'general',
       title: newTask.title,
       priority: newTask.priority as any,
       dueDate: newTask.dueDate || undefined,

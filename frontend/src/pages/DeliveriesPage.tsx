@@ -73,13 +73,17 @@ export function DeliveriesPage() {
   const addDelivery = async () => {
     if (!newDelivery.description.trim() || !newDelivery.estimatedArrival) return;
     await deliveriesService.create({
+      projectId: 'general',
       description: newDelivery.description,
-      supplierName: newDelivery.supplierName,
+      supplierName: newDelivery.supplierName || 'Unknown',
       supplierPhone: newDelivery.supplierPhone,
       estimatedArrival: newDelivery.estimatedArrival,
       poNumber: newDelivery.poNumber,
-      status: 'scheduled',
+      orderDate: new Date().toISOString().split('T')[0],
+      contents: [],
+      isReleased: false,
       isDelivered: false,
+      notify24hr: false,
     });
     setNewDelivery({ description: '', supplierName: '', supplierPhone: '', estimatedArrival: '', poNumber: '' });
     setShowAdd(false);
