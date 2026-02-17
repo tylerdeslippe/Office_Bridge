@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../contexts/appStore';
 import { projectsApi, siteLocationsApi, customersApi, vendorsApi } from '../utils/api';
+import { projectsService } from '../services/projectsService';
 
 type SetupMode = 'quick' | 'full' | null;
 type JobTemplate = 'service_dispatch' | 'small_ti' | 'medium_ti' | 'new_construction' | 'retrofit' | 'full_hvac';
@@ -528,32 +529,35 @@ export function ProjectCreatePage() {
   const handleSubmit = async (asDraft: boolean = false) => {
     setIsSubmitting(true);
     try {
-      await projectsApi.create({
-        name: formData.name, 
-        number: formData.number || `T-${Date.now()}`,
-        description: formData.description || formData.scope_summary,
+      // Use local projectsService instead of API
+      const projectNumber = formData.number || await projectsService.generateProjectNumber();
+      
+      await projectsService.create({
+        name: formData.name || 'Untitled Project',
+        number: projectNumber,
         status: asDraft || setupMode === 'quick' ? 'draft' : 'planning',
-        address: formData.address, 
-        city: formData.city, 
+        address: formData.address,
+        city: formData.city,
         state: formData.state,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        start_date: formData.start_date, 
-        target_end_date: formData.target_end_date,
-        customer_name: formData.customer_name,
-        site_contact_name: formData.site_contact_name,
-        site_contact_phone: formData.site_contact_phone,
-        gc_contact_name: formData.gc_contact_name,
-        gc_contact_phone: formData.gc_contact_phone,
-        parking_notes: formData.parking_notes,
-        access_instructions: formData.access_instructions,
-        gate_code: formData.gate_code,
-        job_type: formData.template || undefined,
+        startDate: formData.start_date,
+        endDate: formData.target_end_date,
+        scopeDescription: formData.description || formData.scope_summary,
+        contacts: [
+          formData.customer_name ? { id: '1', role: 'customer', name: formData.customer_name } : null,
+          formData.site_contact_name ? { id: '2', role: 'site_contact', name: formData.site_contact_name, phone: formData.site_contact_phone } : null,
+          formData.gc_contact_name ? { id: '3', role: 'gc_contact', name: formData.gc_contact_name, phone: formData.gc_contact_phone } : null,
+        ].filter(Boolean) as any[],
+        areas: formData.areas.map((a, i) => ({ id: String(i), name: a, phases: [] })),
+        buildingType: formData.template,
       });
-      showToast(setupMode === 'quick' ? 'Project created as draft' : 'Project created!', 'success');
-      navigate('/today');
+      
+      showToast(setupMode === 'quick' ? 'Project created as draft!' : 'Project created!', 'success');
+      navigate('/dashboard');
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to create project', 'error');
+      console.error('Failed to create project:', err);
+      showToast(err.message || 'Failed to create project', 'error');
     } finally {
       setIsSubmitting(false);
     }

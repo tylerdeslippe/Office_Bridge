@@ -1,384 +1,239 @@
 /**
- * Tasks Page - With Real API Data
- * Priority sections: Needs Acknowledgment > Due Soon > All Tasks
+ * Tasks Page - Modern Clean Design
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check,
-  Clock,
-  AlertCircle,
-  User,
-  Calendar,
-  CheckCircle2,
-  Bell,
-  Loader2,
-  RefreshCw,
+  ArrowLeft,
   Plus,
+  CheckCircle,
+  Circle,
+  Clock,
+  Flag,
+  ChevronRight,
+  Search,
+  Filter,
+  Trash2,
 } from 'lucide-react';
-import { useAppStore } from '../contexts/appStore';
-import { tasksApi } from '../utils/api';
-
-interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  assignee_id: number;
-  created_by_id: number;
-  due_date?: string;
-  priority: 'urgent' | 'high' | 'medium' | 'low';
-  status: 'pending' | 'acknowledged' | 'in_progress' | 'completed' | 'blocked';
-  project_id?: number;
-  created_at: string;
-  acknowledged_at?: string;
-  completed_at?: string;
-}
-
-function TaskCard({ 
-  task, 
-  onAcknowledge, 
-  onComplete,
-  isActioning,
-}: { 
-  task: Task; 
-  onAcknowledge: () => void;
-  onComplete: () => void;
-  isActioning?: boolean;
-}) {
-  const priorityColors = {
-    urgent: 'bg-red-100 text-red-700 border-red-200',
-    high: 'bg-amber-100 text-amber-700 border-amber-200',
-    medium: 'bg-blue-100 text-blue-700 border-blue-200',
-    low: 'bg-gray-100 text-gray-600 border-gray-200',
-  };
-
-  const statusIcons = {
-    pending: <Bell size={16} className="text-amber-500" />,
-    acknowledged: <Clock size={16} className="text-blue-500" />,
-    in_progress: <AlertCircle size={16} className="text-purple-500" />,
-    completed: <CheckCircle2 size={16} className="text-green-500" />,
-    blocked: <AlertCircle size={16} className="text-red-500" />,
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5">{statusIcons[task.status]}</div>
-          <div className="flex-1 min-w-0">
-            <div className="font-medium text-gray-900">{task.title}</div>
-            {task.description && (
-              <div className="text-sm text-gray-500 mt-1 line-clamp-2">{task.description}</div>
-            )}
-            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-              {task.due_date && (
-                <span className="flex items-center gap-1">
-                  <Calendar size={12} />
-                  {formatDate(task.due_date)}
-                </span>
-              )}
-            </div>
-          </div>
-          <span className={`text-xs px-2 py-1 rounded-full border ${priorityColors[task.priority]}`}>
-            {task.priority}
-          </span>
-        </div>
-      </div>
-
-      {/* Action buttons */}
-      {task.status === 'pending' && (
-        <div className="border-t px-4 py-3 bg-amber-50">
-          <button
-            onClick={onAcknowledge}
-            disabled={isActioning}
-            className="w-full py-2 bg-amber-500 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isActioning ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <>
-                <Check size={18} />
-                Acknowledge
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
-      {(task.status === 'acknowledged' || task.status === 'in_progress') && (
-        <div className="border-t px-4 py-3 bg-gray-50">
-          <button
-            onClick={onComplete}
-            disabled={isActioning}
-            className="w-full py-2 bg-green-500 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            {isActioning ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <>
-                <CheckCircle2 size={18} />
-                Mark Complete
-              </>
-            )}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
+import { tasksService, Task } from '../services/tasksService';
 
 export function TasksPage() {
   const navigate = useNavigate();
-  const { currentProject, setUnacknowledgedTasks, showToast } = useAppStore();
-  
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [actioningTaskId, setActioningTaskId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<'all' | 'mine'>('mine');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', priority: 'medium', dueDate: '' });
 
-  // Fetch tasks when project changes
+  // Dark mode
+  const [isDark, setIsDark] = useState(false);
   useEffect(() => {
-    if (!currentProject) {
-      setTasks([]);
-      return;
-    }
-    
-    const abortController = new AbortController();
-    
-    const fetchTasks = async () => {
-      setIsLoading(true);
-      try {
-        const params: any = { project_id: currentProject.id, limit: 100 };
-        if (filter === 'mine') {
-          params.my_tasks = true;
-        }
-        const response = await tasksApi.list(params);
-        
-        if (abortController.signal.aborted) return;
-        
-        const taskList = Array.isArray(response.data) ? response.data : [];
-        setTasks(taskList);
-        
-        // Update unacknowledged count
-        const pendingCount = taskList.filter((t: Task) => t.status === 'pending').length;
-        setUnacknowledgedTasks(pendingCount);
-      } catch (err: any) {
-        if (abortController.signal.aborted) return;
-        console.error('Failed to fetch tasks:', err);
-        showToast('Failed to load tasks', 'error');
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    fetchTasks();
-    
-    return () => {
-      abortController.abort();
-    };
-  }, [currentProject, filter]);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDark(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
-  const fetchTasks = async () => {
-    if (!currentProject) return;
-    
+  const bg = isDark ? 'bg-black' : 'bg-gray-50';
+  const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
+  const text = isDark ? 'text-white' : 'text-gray-900';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const border = isDark ? 'border-gray-800' : 'border-gray-200';
+
+  useEffect(() => {
+    loadTasks();
+  }, []);
+
+  const loadTasks = async () => {
     setIsLoading(true);
-    try {
-      const params: any = { project_id: currentProject.id, limit: 100 };
-      if (filter === 'mine') {
-        params.my_tasks = true;
-      }
-      const response = await tasksApi.list(params);
-      const taskList = Array.isArray(response.data) ? response.data : [];
-      setTasks(taskList);
-      
-      // Update unacknowledged count
-      const pendingCount = taskList.filter((t: Task) => t.status === 'pending').length;
-      setUnacknowledgedTasks(pendingCount);
-    } catch (err: any) {
-      console.error('Failed to fetch tasks:', err);
-      showToast('Failed to load tasks', 'error');
-    } finally {
-      setIsLoading(false);
-    }
+    const data = await tasksService.getAll();
+    setTasks(data);
+    setIsLoading(false);
   };
 
-  const handleAcknowledge = async (taskId: number) => {
-    setActioningTaskId(taskId);
-    try {
-      await tasksApi.acknowledge(taskId);
-      // Update local state
-      setTasks(prev => prev.map(t => 
-        t.id === taskId ? { ...t, status: 'acknowledged' as const } : t
-      ));
-      const currentCount = useAppStore.getState().unacknowledgedTasks;
-      setUnacknowledgedTasks(Math.max(0, currentCount - 1));
-      showToast('Task acknowledged', 'success');
-    } catch (err: any) {
-      console.error('Failed to acknowledge task:', err);
-      showToast(err.response?.data?.detail || 'Failed to acknowledge task', 'error');
-    } finally {
-      setActioningTaskId(null);
-    }
+  const toggleComplete = async (task: Task) => {
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    await tasksService.update(task.id, { status: newStatus });
+    loadTasks();
   };
 
-  const handleComplete = async (taskId: number) => {
-    setActioningTaskId(taskId);
-    try {
-      await tasksApi.complete(taskId);
-      // Update local state
-      setTasks(prev => prev.map(t => 
-        t.id === taskId ? { ...t, status: 'completed' as const } : t
-      ));
-      showToast('Task completed!', 'success');
-    } catch (err: any) {
-      console.error('Failed to complete task:', err);
-      showToast(err.response?.data?.detail || 'Failed to complete task', 'error');
-    } finally {
-      setActioningTaskId(null);
-    }
+  const addTask = async () => {
+    if (!newTask.title.trim()) return;
+    await tasksService.create({
+      title: newTask.title,
+      priority: newTask.priority as any,
+      dueDate: newTask.dueDate || undefined,
+      status: 'pending',
+    });
+    setNewTask({ title: '', priority: 'medium', dueDate: '' });
+    setShowAdd(false);
+    loadTasks();
   };
 
-  // Group tasks by status
-  const needsAcknowledgment = tasks.filter(t => t.status === 'pending');
-  const inProgress = tasks.filter(t => t.status === 'acknowledged' || t.status === 'in_progress');
-  const completed = tasks.filter(t => t.status === 'completed');
+  const deleteTask = async (id: string) => {
+    await tasksService.delete(id);
+    loadTasks();
+  };
 
-  if (!currentProject) {
-    return (
-      <div className="p-4 pt-8 text-center">
-        <p className="text-gray-500">Select a project to view tasks</p>
-      </div>
-    );
-  }
+  const filteredTasks = tasks.filter(t => {
+    if (filter === 'pending') return t.status !== 'completed';
+    if (filter === 'completed') return t.status === 'completed';
+    return true;
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'text-red-500 bg-red-500/10';
+      case 'high': return 'text-orange-500 bg-orange-500/10';
+      case 'medium': return 'text-blue-500 bg-blue-500/10';
+      default: return 'text-gray-500 bg-gray-500/10';
+    }
+  };
 
   return (
-    <div className="pb-20">
-      {/* Header with filter */}
-      <div className="px-4 py-3 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Tasks</h1>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={fetchTasks}
-            className="p-2 text-gray-400"
-            disabled={isLoading}
-          >
-            <RefreshCw size={20} className={isLoading ? 'animate-spin' : ''} />
+    <div className={`min-h-screen ${bg} ${text}`}>
+      {/* Header */}
+      <header className={`${bg} px-6 pt-14 pb-4 sticky top-0 z-10`}>
+        <div className="flex items-center gap-4 mb-6">
+          <button onClick={() => navigate(-1)} className={`w-10 h-10 ${cardBg} rounded-full flex items-center justify-center ${border} border`}>
+            <ArrowLeft size={20} />
           </button>
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setFilter('mine')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                filter === 'mine' ? 'bg-white shadow font-medium' : 'text-gray-600'
-              }`}
-            >
-              My Tasks
-            </button>
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                filter === 'all' ? 'bg-white shadow font-medium' : 'text-gray-600'
-              }`}
-            >
-              All
-            </button>
-          </div>
+          <h1 className="text-2xl font-bold flex-1">Tasks</h1>
+          <button 
+            onClick={() => setShowAdd(true)}
+            className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center"
+          >
+            <Plus size={20} className="text-white" />
+          </button>
         </div>
+
+        {/* Filter Pills */}
+        <div className="flex gap-2">
+          {(['all', 'pending', 'completed'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
+                filter === f 
+                  ? 'bg-blue-500 text-white' 
+                  : `${cardBg} ${textMuted} ${border} border`
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {/* Tasks List */}
+      <div className="px-6 pb-8 space-y-3">
+        {filteredTasks.length === 0 ? (
+          <div className={`${cardBg} rounded-2xl p-8 ${border} border text-center mt-8`}>
+            <CheckCircle size={48} className={`${textMuted} mx-auto mb-4`} />
+            <p className="font-medium mb-1">No tasks</p>
+            <p className={`text-sm ${textMuted}`}>
+              {filter === 'completed' ? 'No completed tasks yet' : 'Add a task to get started'}
+            </p>
+          </div>
+        ) : (
+          filteredTasks.map(task => (
+            <div 
+              key={task.id} 
+              className={`${cardBg} rounded-2xl p-4 ${border} border flex items-center gap-4`}
+            >
+              <button 
+                onClick={() => toggleComplete(task)}
+                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  task.status === 'completed' 
+                    ? 'bg-green-500 border-green-500' 
+                    : `${border}`
+                }`}
+              >
+                {task.status === 'completed' && <CheckCircle size={14} className="text-white" />}
+              </button>
+              
+              <div className="flex-1 min-w-0">
+                <div className={`font-medium ${task.status === 'completed' ? 'line-through opacity-50' : ''}`}>
+                  {task.title}
+                </div>
+                <div className={`flex items-center gap-3 mt-1 text-xs ${textMuted}`}>
+                  {task.dueDate && (
+                    <span className={`flex items-center gap-1 ${task.dueDate < today && task.status !== 'completed' ? 'text-red-500' : ''}`}>
+                      <Clock size={12} />
+                      {task.dueDate === today ? 'Today' : new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                  <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${getPriorityColor(task.priority)}`}>
+                    <Flag size={10} />
+                    {task.priority}
+                  </span>
+                </div>
+              </div>
+
+              <button onClick={() => deleteTask(task.id)} className={textMuted}>
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))
+        )}
       </div>
 
-      {isLoading ? (
-        <div className="p-8 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-gray-400" />
-          <p className="mt-2 text-gray-500">Loading tasks...</p>
-        </div>
-      ) : (
-        <div className="px-4 space-y-6">
-          {/* Needs Acknowledgment Section */}
-          {needsAcknowledgment.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Bell size={18} className="text-amber-500" />
-                <h2 className="font-semibold text-gray-900">Needs Acknowledgment</h2>
-                <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full">
-                  {needsAcknowledgment.length}
-                </span>
-              </div>
-              <div className="space-y-3">
-                {needsAcknowledgment.map(task => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task}
-                    onAcknowledge={() => handleAcknowledge(task.id)}
-                    onComplete={() => handleComplete(task.id)}
-                    isActioning={actioningTaskId === task.id}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* In Progress Section */}
-          {inProgress.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <Clock size={18} className="text-blue-500" />
-                <h2 className="font-semibold text-gray-900">In Progress</h2>
-              </div>
-              <div className="space-y-3">
-                {inProgress.map(task => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task}
-                    onAcknowledge={() => handleAcknowledge(task.id)}
-                    onComplete={() => handleComplete(task.id)}
-                    isActioning={actioningTaskId === task.id}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Completed Section */}
-          {completed.length > 0 && (
-            <section>
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 size={18} className="text-green-500" />
-                <h2 className="font-semibold text-gray-900">Completed</h2>
-              </div>
-              <div className="space-y-3">
-                {completed.slice(0, 5).map(task => (
-                  <TaskCard 
-                    key={task.id} 
-                    task={task}
-                    onAcknowledge={() => {}}
-                    onComplete={() => {}}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Empty state */}
-          {tasks.length === 0 && (
-            <div className="text-center py-12">
-              <CheckCircle2 size={48} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="font-semibold text-gray-900">No tasks yet</h3>
-              <p className="text-gray-500">Tasks assigned to you will appear here</p>
+      {/* Add Task Modal */}
+      {showAdd && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
+          <div className={`${cardBg} w-full rounded-t-3xl p-6 pb-10 animate-slide-up`}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">New Task</h2>
+              <button onClick={() => setShowAdd(false)} className={textMuted}>Cancel</button>
             </div>
-          )}
+
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                placeholder="Task title"
+                className={`w-full px-4 py-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} ${text} border rounded-2xl outline-none focus:ring-2 focus:ring-blue-500`}
+                autoFocus
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`text-xs ${textMuted} mb-1 block`}>Priority</label>
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                    className={`w-full px-4 py-3 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} ${text} border rounded-xl outline-none`}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`text-xs ${textMuted} mb-1 block`}>Due Date</label>
+                  <input
+                    type="date"
+                    value={newTask.dueDate}
+                    onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                    className={`w-full px-4 py-3 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'} ${text} border rounded-xl outline-none`}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={addTask}
+                disabled={!newTask.title.trim()}
+                className="w-full py-4 bg-blue-500 text-white rounded-2xl font-semibold disabled:opacity-50"
+              >
+                Add Task
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

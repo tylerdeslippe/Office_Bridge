@@ -1,10 +1,14 @@
 /**
- * Local Auth Store - No server required
- * User profile stored entirely on device
+ * Auth Store - Server authentication with local fallback
+ * Connects to Railway backend for login/register
+ * Stores token and user data locally
  */
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { localDB } from '../utils/localDB';
+
+// API base URL - change this to your Railway URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8001/api/v1';
 
 export type UserRole = 
   | 'project_manager'
@@ -12,7 +16,8 @@ export type UserRole =
   | 'foreman'
   | 'project_engineer'
   | 'admin'
-  | 'field_worker';
+  | 'field_worker'
+  | 'developer';
 
 export interface LocalUser {
   id: string;
@@ -21,16 +26,19 @@ export interface LocalUser {
   lastName: string;
   phone?: string;
   role: UserRole;
+  companyId?: number;
+  companyCode?: string;
   companyName?: string;
   companyLogo?: string;
   createdAt: string;
 }
 
 // Roles that have PM-level access
-const PM_ROLES: UserRole[] = ['project_manager', 'superintendent', 'admin'];
+const PM_ROLES: UserRole[] = ['project_manager', 'superintendent', 'admin', 'developer'];
 
 interface AuthState {
   user: LocalUser | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isOnboarded: boolean;
@@ -38,18 +46,20 @@ interface AuthState {
   // Role checks
   isPM: () => boolean;
   isAdmin: () => boolean;
+  isDeveloper: () => boolean;
   hasRole: (roles: UserRole[]) => boolean;
   
-  // Auth actions (all local, no server)
-  createProfile: (data: {
+  // Server auth actions
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: {
+    email: string;
+    password: string;
     firstName: string;
     lastName: string;
-    email?: string;
-    phone?: string;
-    role: UserRole;
-    companyName?: string;
+    companyCode: string;
   }) => Promise<void>;
   
+  // Local profile update
   updateProfile: (updates: Partial<LocalUser>) => Promise<void>;
   
   logout: () => void;
@@ -57,12 +67,16 @@ interface AuthState {
   // For importing/exporting data
   exportUserData: () => Promise<string>;
   importUserData: (data: string) => Promise<void>;
+  
+  // Sync with server
+  syncWithServer: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      token: null,
       isAuthenticated: false,
       isLoading: false,
       isOnboarded: false,
@@ -80,6 +94,12 @@ export const useAuthStore = create<AuthState>()(
         return user?.role === 'admin';
       },
       
+      // Check if user is developer
+      isDeveloper: () => {
+        const user = get().user;
+        return user?.role === 'developer';
+      },
+      
       // Check if user has any of the specified roles
       hasRole: (roles: UserRole[]) => {
         const user = get().user;
@@ -87,27 +107,102 @@ export const useAuthStore = create<AuthState>()(
         return roles.includes(user.role);
       },
       
-      // Create a new local profile (no server needed)
-      createProfile: async (data) => {
-        const user: LocalUser = {
-          id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          email: data.email || '',
-          firstName: data.firstName,
-          lastName: data.lastName,
-          phone: data.phone,
-          role: data.role,
-          companyName: data.companyName,
-          createdAt: new Date().toISOString(),
-        };
+      // Login with server
+      login: async (email: string, password: string) => {
+        set({ isLoading: true });
         
-        // Save to local storage
-        await localDB.setSetting('user_profile', user);
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Login failed');
+          }
+          
+          const data = await response.json();
+          
+          const user: LocalUser = {
+            id: String(data.user.id),
+            email: data.user.email,
+            firstName: data.user.first_name,
+            lastName: data.user.last_name,
+            role: data.user.role as UserRole,
+            companyId: data.user.company_id,
+            companyCode: data.user.company_code,
+            companyName: data.user.company_name,
+            createdAt: data.user.created_at || new Date().toISOString(),
+          };
+          
+          await localDB.setSetting('user_profile', user);
+          await localDB.setSetting('auth_token', data.access_token);
+          
+          set({
+            user,
+            token: data.access_token,
+            isAuthenticated: true,
+            isOnboarded: true,
+            isLoading: false,
+          });
+        } catch (error: any) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+      
+      // Register new user with server
+      register: async (data) => {
+        set({ isLoading: true });
         
-        set({
-          user,
-          isAuthenticated: true,
-          isOnboarded: true,
-        });
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: data.email,
+              password: data.password,
+              first_name: data.firstName,
+              last_name: data.lastName,
+              company_code: data.companyCode,
+            }),
+          });
+          
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Registration failed');
+          }
+          
+          const responseData = await response.json();
+          
+          const user: LocalUser = {
+            id: String(responseData.user.id),
+            email: responseData.user.email,
+            firstName: responseData.user.first_name,
+            lastName: responseData.user.last_name,
+            role: responseData.user.role as UserRole,
+            companyId: responseData.user.company_id,
+            companyCode: data.companyCode,
+            companyName: responseData.user.company_name,
+            createdAt: responseData.user.created_at || new Date().toISOString(),
+          };
+          
+          await localDB.setSetting('user_profile', user);
+          await localDB.setSetting('auth_token', responseData.access_token);
+          
+          set({
+            user,
+            token: responseData.access_token,
+            isAuthenticated: true,
+            isOnboarded: true,
+            isLoading: false,
+          });
+        } catch (error: any) {
+          set({ isLoading: false });
+          throw error;
+        }
       },
       
       // Update profile
@@ -118,16 +213,44 @@ export const useAuthStore = create<AuthState>()(
         const updatedUser = { ...currentUser, ...updates };
         await localDB.setSetting('user_profile', updatedUser);
         
+        // TODO: Sync with server if online
+        
         set({ user: updatedUser });
       },
       
-      // Logout (clears profile but keeps data)
+      // Logout
       logout: () => {
+        localDB.setSetting('auth_token', null);
         set({
           user: null,
+          token: null,
           isAuthenticated: false,
           isOnboarded: false,
         });
+      },
+      
+      // Sync local data with server
+      syncWithServer: async () => {
+        const token = get().token;
+        if (!token) return;
+        
+        try {
+          // Pull updates from server
+          const response = await fetch(`${API_BASE_URL}/companies/sync/pull`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            // TODO: Merge server data with local data
+            console.log('Sync complete:', data);
+          }
+        } catch (error) {
+          console.error('Sync failed:', error);
+        }
       },
       
       // Export all user data as JSON (for backup or transfer)
@@ -221,6 +344,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'local-auth-storage',
       partialize: (state) => ({
         user: state.user,
+        token: state.token,
         isAuthenticated: state.isAuthenticated,
         isOnboarded: state.isOnboarded,
       }),

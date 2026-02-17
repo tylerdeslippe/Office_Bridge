@@ -1,201 +1,173 @@
+/**
+ * Projects Page - Modern Clean Design
+ */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, MapPin, Calendar, ChevronRight, Loader2 } from 'lucide-react';
-import { Project, ProjectStatus } from '../utils/types';
-import { projectsApi } from '../utils/api';
-import { useAppStore } from '../contexts/appStore';
-
-const statusColors: Record<ProjectStatus, string> = {
-  planning: 'bg-gray-100 text-gray-700',
-  active: 'bg-green-100 text-green-700',
-  on_hold: 'bg-amber-100 text-amber-700',
-  completed: 'bg-blue-100 text-blue-700',
-  closed: 'bg-gray-100 text-gray-500',
-};
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Plus,
+  Building2,
+  MapPin,
+  Search,
+  ChevronRight,
+  Filter,
+} from 'lucide-react';
+import { projectsService, Project } from '../services/projectsService';
 
 export function ProjectsPage() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>('');
-  const { setCurrentProject, currentProject } = useAppStore();
-  
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Dark mode
+  const [isDark, setIsDark] = useState(false);
   useEffect(() => {
-    const abortController = new AbortController();
-    
-    const loadProjects = async () => {
-      setIsLoading(true);
-      try {
-        const response = await projectsApi.list({
-          status: statusFilter || undefined,
-          search: search || undefined,
-        });
-        
-        if (abortController.signal.aborted) return;
-        
-        // FastAPI returns array directly, not { projects: [...] }
-        const projectList = Array.isArray(response.data) ? response.data : [];
-        setProjects(projectList);
-      } catch (error: any) {
-        if (abortController.signal.aborted) return;
-        console.error('Failed to load projects:', error);
-      } finally {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDark(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  const bg = isDark ? 'bg-black' : 'bg-gray-50';
+  const cardBg = isDark ? 'bg-gray-900' : 'bg-white';
+  const text = isDark ? 'text-white' : 'text-gray-900';
+  const textMuted = isDark ? 'text-gray-400' : 'text-gray-500';
+  const border = isDark ? 'border-gray-800' : 'border-gray-200';
+  const inputBg = isDark ? 'bg-gray-800' : 'bg-gray-100';
+
+  useEffect(() => {
     loadProjects();
-    
-    return () => {
-      abortController.abort();
-    };
-  }, [statusFilter]);
-  
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Trigger reload by updating a dependency or calling directly
+  }, []);
+
+  const loadProjects = async () => {
     setIsLoading(true);
-    projectsApi.list({
-      status: statusFilter || undefined,
-      search: search || undefined,
-    }).then(response => {
-      const projectList = Array.isArray(response.data) ? response.data : [];
-      setProjects(projectList);
-    }).catch(error => {
-      console.error('Failed to load projects:', error);
-    }).finally(() => {
-      setIsLoading(false);
-    });
+    const data = await projectsService.getAll();
+    setProjects(data);
+    setIsLoading(false);
   };
-  
-  const handleSelectProject = (project: Project) => {
-    setCurrentProject(project as any);
+
+  const filteredProjects = projects.filter(p => {
+    const matchesFilter = filter === 'all' || p.status === filter;
+    const matchesSearch = !search || 
+      p.name.toLowerCase().includes(search.toLowerCase()) ||
+      p.number?.toLowerCase().includes(search.toLowerCase()) ||
+      p.city?.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'text-green-500 bg-green-500/10';
+      case 'planning': return 'text-blue-500 bg-blue-500/10';
+      case 'draft': return 'text-gray-500 bg-gray-500/10';
+      case 'on_hold': return 'text-amber-500 bg-amber-500/10';
+      case 'completed': return 'text-purple-500 bg-purple-500/10';
+      default: return 'text-gray-500 bg-gray-500/10';
+    }
   };
-  
+
+  const statuses = ['all', 'active', 'planning', 'draft', 'completed'];
+
   return (
-    <div className="px-4 py-6 space-y-4">
-      {/* Search */}
-      <form onSubmit={handleSearch} className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search projects..."
-          className="input pl-10"
-        />
-      </form>
-      
-      {/* Filter Chips */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
-        <button
-          onClick={() => setStatusFilter('')}
-          className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-            statusFilter === ''
-              ? 'bg-blueprint text-white'
-              : 'bg-gray-100 text-gray-700'
-          }`}
-        >
-          All
-        </button>
-        {(['active', 'planning', 'on_hold', 'completed'] as ProjectStatus[]).map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-              statusFilter === status
-                ? 'bg-blueprint text-white'
-                : 'bg-gray-100 text-gray-700'
-            }`}
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')}
+    <div className={`min-h-screen ${bg} ${text}`}>
+      {/* Header */}
+      <header className={`${bg} px-6 pt-14 pb-4 sticky top-0 z-10`}>
+        <div className="flex items-center gap-4 mb-6">
+          <button onClick={() => navigate('/dashboard')} className={`w-10 h-10 ${cardBg} rounded-full flex items-center justify-center ${border} border`}>
+            <ArrowLeft size={20} />
           </button>
-        ))}
-      </div>
-      
-      {/* Projects List */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={32} className="animate-spin text-blueprint" />
+          <h1 className="text-2xl font-bold flex-1">Projects</h1>
+          <button 
+            onClick={() => navigate('/projects/new')}
+            className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center"
+          >
+            <Plus size={20} className="text-white" />
+          </button>
         </div>
-      ) : projects.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 mb-4">No projects found</p>
-          <Link to="/projects/new" className="btn-primary inline-flex items-center gap-2">
-            <Plus size={20} />
-            Create Project
-          </Link>
+
+        {/* Search */}
+        <div className={`flex items-center gap-3 px-4 py-3 ${inputBg} rounded-2xl mb-4`}>
+          <Search size={20} className={textMuted} />
+          <input 
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search projects..."
+            className={`flex-1 bg-transparent outline-none ${text}`}
+          />
         </div>
-      ) : (
-        <div className="space-y-3">
-          {projects.map((project) => (
-            <div
-              key={project.id}
-              className={`card cursor-pointer transition-all ${
-                currentProject?.id === project.id
-                  ? 'ring-2 ring-blueprint'
-                  : 'active:scale-[0.99]'
+
+        {/* Filter Pills */}
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-6 px-6 scrollbar-hide">
+          {statuses.map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={`px-4 py-2 rounded-full text-sm font-medium capitalize whitespace-nowrap ${
+                filter === s 
+                  ? 'bg-blue-500 text-white' 
+                  : `${cardBg} ${textMuted} ${border} border`
               }`}
-              onClick={() => handleSelectProject(project)}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`badge text-xs ${statusColors[project.status]}`}>
-                      {project.status.replace('_', ' ')}
-                    </span>
-                    {currentProject?.id === project.id && (
-                      <span className="badge bg-blueprint text-white text-xs">Selected</span>
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-gray-900 truncate">{project.name}</h3>
-                  {project.number && (
-                    <p className="text-sm text-gray-500">#{project.number}</p>
-                  )}
-                </div>
-                <Link
-                  to={`/projects/${project.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  className="p-2 -m-2 text-gray-400 hover:text-gray-600"
-                >
-                  <ChevronRight size={20} />
-                </Link>
-              </div>
-              
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                {project.city && (
-                  <span className="flex items-center gap-1">
-                    <MapPin size={14} />
-                    {project.city}, {project.state}
-                  </span>
-                )}
-                {project.target_completion && (
-                  <span className="flex items-center gap-1">
-                    <Calendar size={14} />
-                    {new Date(project.target_completion).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-              
-              {project.client_name && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Client: {project.client_name}
-                </p>
-              )}
-            </div>
+              {s}
+            </button>
           ))}
         </div>
-      )}
-      
-      {/* FAB */}
-      <Link
-        to="/projects/new"
-        className="fixed bottom-24 right-4 w-14 h-14 bg-blueprint text-white rounded-full shadow-lg flex items-center justify-center active:scale-95 transition-transform"
-      >
-        <Plus size={24} />
-      </Link>
+      </header>
+
+      {/* Projects List */}
+      <div className="px-6 pb-8 space-y-3">
+        {filteredProjects.length === 0 ? (
+          <div className={`${cardBg} rounded-2xl p-8 ${border} border text-center mt-4`}>
+            <Building2 size={48} className={`${textMuted} mx-auto mb-4`} />
+            <p className="font-medium mb-1">No projects found</p>
+            <p className={`text-sm ${textMuted} mb-4`}>
+              {search ? 'Try a different search' : 'Create your first project'}
+            </p>
+            {!search && (
+              <button
+                onClick={() => navigate('/projects/new')}
+                className="px-6 py-3 bg-blue-500 text-white rounded-xl font-medium"
+              >
+                New Project
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredProjects.map(project => (
+            <button
+              key={project.id}
+              onClick={() => navigate(`/projects/${project.id}`)}
+              className={`w-full ${cardBg} rounded-2xl p-4 ${border} border flex items-center gap-4 text-left`}
+            >
+              <div className={`w-14 h-14 ${isDark ? 'bg-gray-800' : 'bg-gray-100'} rounded-xl flex items-center justify-center flex-shrink-0`}>
+                <Building2 size={24} className={textMuted} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold truncate">{project.name}</div>
+                <div className={`text-sm ${textMuted} flex items-center gap-2 mt-1`}>
+                  {project.number && <span>#{project.number}</span>}
+                  {project.city && (
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} />
+                      {project.city}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <span className={`px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(project.status)}`}>
+                  {project.status}
+                </span>
+                <ChevronRight size={18} className={textMuted} />
+              </div>
+            </button>
+          ))
+        )}
+      </div>
     </div>
   );
 }

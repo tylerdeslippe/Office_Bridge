@@ -5,16 +5,13 @@ const config: CapacitorConfig = {
   appName: 'Office Bridge',
   webDir: 'dist',
   server: {
-    // For development, you can use your local dev server
-    // Comment this out for production builds
-    // url: 'http://192.168.1.100:5173',
-    // cleartext: true,
     androidScheme: 'https'
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 2000,
+      launchShowDuration: 1500,
       launchAutoHide: true,
+      launchFadeOutDuration: 300,
       backgroundColor: '#2563eb',
       androidScaleType: 'CENTER_CROP',
       showSpinner: false,
@@ -22,8 +19,9 @@ const config: CapacitorConfig = {
       splashImmersive: true,
     },
     StatusBar: {
-      style: 'LIGHT',
-      backgroundColor: '#2563eb',
+      style: 'DARK',
+      backgroundColor: '#ffffff',
+      overlaysWebView: false,
     },
     Keyboard: {
       resize: 'body',
@@ -36,17 +34,12 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
-    Camera: {
-      // iOS camera permissions
-    },
-    Geolocation: {
-      // iOS location permissions
-    },
   },
   ios: {
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
     scheme: 'Office Bridge',
+    backgroundColor: '#ffffff',
   },
   android: {
     allowMixedContent: true,

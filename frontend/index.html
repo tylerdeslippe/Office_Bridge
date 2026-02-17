@@ -2,11 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <link rel="icon" type="image/svg+xml" href="/app-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Office Bridge" />
+    <meta name="theme-color" content="#ffffff" />
     <meta name="description" content="Field-to-Office Construction Management" />
     
     <!-- PWA Manifest -->
@@ -15,16 +16,68 @@
     <!-- iOS Icons -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/icon-152.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
     
     <title>Office Bridge</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Remove iOS tap highlight */
+      * { -webkit-tap-highlight-color: transparent; }
+      
+      /* Safe area handling */
+      :root {
+        --sat: env(safe-area-inset-top);
+        --sar: env(safe-area-inset-right);
+        --sab: env(safe-area-inset-bottom);
+        --sal: env(safe-area-inset-left);
+      }
+      
+      /* Splash screen */
+      #splash {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.3s ease-out;
+      }
+      #splash.hidden { opacity: 0; pointer-events: none; }
+      #splash svg { width: 80px; height: 80px; margin-bottom: 16px; }
+      #splash h1 { color: white; font-family: Inter, sans-serif; font-size: 24px; font-weight: 700; margin: 0; }
+      #splash p { color: rgba(255,255,255,0.8); font-family: Inter, sans-serif; font-size: 14px; margin-top: 8px; }
+    </style>
   </head>
   <body>
+    <!-- Splash Screen -->
+    <div id="splash">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="30" width="80" height="60" rx="4" fill="white" fill-opacity="0.9"/>
+        <rect x="20" y="10" width="60" height="30" rx="4" fill="white"/>
+        <rect x="25" y="40" width="20" height="15" rx="2" fill="#2563eb"/>
+        <rect x="55" y="40" width="20" height="15" rx="2" fill="#2563eb"/>
+        <rect x="25" y="65" width="50" height="8" rx="2" fill="#e5e7eb"/>
+        <rect x="25" y="77" width="35" height="6" rx="1" fill="#e5e7eb"/>
+      </svg>
+      <h1>Office Bridge</h1>
+      <p>Loading...</p>
+    </div>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Hide splash after app loads
+      window.addEventListener('load', () => {
+        setTimeout(() => {
+          document.getElementById('splash')?.classList.add('hidden');
+          setTimeout(() => document.getElementById('splash')?.remove(), 300);
+        }, 500);
+      });
+    </script>
   </body>
 </html>

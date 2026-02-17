@@ -1,111 +1,273 @@
-import { useState } from 'react';
-import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Building2, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { useAuthStore } from '../contexts/authStore';
+/**
+ * Login Page - Clean minimal design
+ * Single scrolling page with dark/light mode support
+ */
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Loader2,
+  Building2,
+  ArrowRight,
+  User,
+} from 'lucide-react';
+import { useAuthStore } from '../contexts/localAuthStore';
+
+type AuthMode = 'login' | 'register';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading, error, clearError } = useAuthStore();
+  const { login, register } = useAuthStore();
   
+  const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [companyCode, setCompanyCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
+  // Detect dark mode
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDarkMode(mediaQuery.matches);
+    
+    const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
-    
+    setError('');
+    setIsLoading(true);
+
     try {
-      await login(email, password);
-      navigate('/');
-    } catch {
-      // Error handled in store
+      if (mode === 'login') {
+        await login(email, password);
+        navigate('/dashboard');
+      } else {
+        if (password !== confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters');
+          setIsLoading(false);
+          return;
+        }
+        if (!firstName || !lastName) {
+          setError('Please enter your full name');
+          setIsLoading(false);
+          return;
+        }
+        if (!companyCode) {
+          setError('Company code is required');
+          setIsLoading(false);
+          return;
+        }
+
+        await register({
+          email,
+          password,
+          firstName,
+          lastName,
+          companyCode,
+        });
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
+  const bgColor = isDarkMode ? 'bg-black' : 'bg-white';
+  const textColor = isDarkMode ? 'text-white' : 'text-gray-900';
+  const textMuted = isDarkMode ? 'text-gray-400' : 'text-gray-500';
+  const inputBg = isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200';
+  const inputText = isDarkMode ? 'text-white placeholder-gray-500' : 'text-gray-900 placeholder-gray-400';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blueprint to-blue-900 flex flex-col">
-      {/* Header */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 pt-12 pb-8">
-        <div className="w-16 h-16 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center mb-4">
-          <Building2 size={32} className="text-white" />
-        </div>
-        <h1 className="text-2xl font-bold text-white mb-1">Office Bridge</h1>
-        <p className="text-blue-200 text-sm">Field-to-Office Connection</p>
-      </div>
-      
-      {/* Form */}
-      <div className="bg-white rounded-t-3xl px-6 pt-8 pb-10 shadow-xl">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Sign In</h2>
+    <div className={`min-h-screen ${bgColor} ${textColor} overflow-y-auto`}>
+      <div className="min-h-screen flex flex-col px-8 py-16 max-w-md mx-auto">
         
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="label">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-              placeholder="you@company.com"
-              required
-              autoComplete="email"
-            />
+        {/* Logo */}
+        <div className="flex-1 flex flex-col items-center justify-center">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold tracking-tight">
+              <span className="text-blue-500">Office</span>
+              <span className={textColor}>Bridge</span>
+            </h1>
           </div>
           
-          <div>
-            <label className="label">Password</label>
+          {/* Tagline */}
+          <p className={`text-lg ${textMuted} mb-12 text-center`}>
+            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+          </p>
+        </div>
+
+        {/* Form */}
+        <div className="flex-1">
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'register' && (
+              <>
+                {/* Name Fields */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="relative">
+                    <User size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className={`w-full pl-12 pr-4 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                      placeholder="First name"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className={`w-full px-4 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                      placeholder="Last name"
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Email */}
             <div className="relative">
+              <Mail size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={`w-full pl-12 pr-4 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                placeholder="Email"
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div className="relative">
+              <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input pr-12"
-                placeholder="Enter password"
+                className={`w-full pl-12 pr-12 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                placeholder="Password"
                 required
-                autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-400"
+                className={`absolute right-4 top-1/2 -translate-y-1/2 ${textMuted}`}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
-          </div>
-          
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="btn-primary w-full mt-6 flex items-center justify-center gap-2"
-          >
-            {isLoading ? (
+
+            {mode === 'register' && (
               <>
-                <Loader2 size={20} className="animate-spin" />
-                Signing in...
+                {/* Confirm Password */}
+                <div className="relative">
+                  <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className={`w-full pl-12 pr-4 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                    placeholder="Confirm password"
+                    required
+                  />
+                </div>
+
+                {/* Company Code */}
+                <div className="relative">
+                  <Building2 size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
+                  <input
+                    type="text"
+                    value={companyCode}
+                    onChange={(e) => setCompanyCode(e.target.value.toUpperCase())}
+                    className={`w-full pl-12 pr-4 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none uppercase`}
+                    placeholder="Company code"
+                    required
+                  />
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newCode = `CO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+                    setCompanyCode(newCode);
+                  }}
+                  className="text-sm text-blue-500 font-medium"
+                >
+                  + Create new company code
+                </button>
               </>
-            ) : (
-              'Sign In'
             )}
-          </button>
-        </form>
-        
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Don't have an account?{' '}
-          <Link to="/register" className="text-blueprint font-medium">
-            Create one
-          </Link>
-        </p>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-blue-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
+            >
+              {isLoading ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <>
+                  {mode === 'login' ? 'Sign In' : 'Create Account'}
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Mode Toggle */}
+          <div className="mt-8 text-center">
+            <p className={textMuted}>
+              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+            </p>
+            <button
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+              className="text-blue-500 font-semibold mt-1"
+            >
+              {mode === 'login' ? 'Create Account' : 'Sign In'}
+            </button>
+          </div>
+
+          {mode === 'login' && (
+            <button className={`w-full mt-6 text-sm ${textMuted}`}>
+              Forgot password?
+            </button>
+          )}
+        </div>
+
+        {/* Bottom spacer for scrolling */}
+        <div className="h-8" />
       </div>
     </div>
   );

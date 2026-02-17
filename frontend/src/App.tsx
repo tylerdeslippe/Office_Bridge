@@ -2,14 +2,14 @@
  * Office Bridge - Main App Router
  * Field-to-Office Construction Management
  * 
- * LOCAL-FIRST: All data stored on device, no server required
+ * Server authentication with local data storage
  */
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { useAuthStore } from './contexts/localAuthStore';
 
-// Onboarding (replaces login/register for local-only mode)
-import { OnboardingPage } from './pages/OnboardingPage';
+// Auth
+import { LoginPage } from './pages/LoginPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TeamSetupPage } from './pages/TeamSetupPage';
@@ -44,33 +44,33 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-// Protected route wrapper - redirects to onboarding if not set up
+// Protected route wrapper - redirects to login if not authenticated
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isOnboarded } = useAuthStore();
-  if (!isOnboarded) {
-    return <Navigate to="/onboarding" replace />;
+  const { isAuthenticated } = useAuthStore();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 }
 
 // Protected MainLayout wrapper
 function ProtectedMainLayout() {
-  const { isOnboarded } = useAuthStore();
-  if (!isOnboarded) {
-    return <Navigate to="/onboarding" replace />;
+  const { isAuthenticated } = useAuthStore();
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
   return <MainLayout />;
 }
 
 export default function App() {
-  const { isOnboarded } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Onboarding (first-time setup) */}
-        <Route path="/onboarding" element={
-          isOnboarded ? <Navigate to="/dashboard" replace /> : <OnboardingPage />
+        {/* Login/Register */}
+        <Route path="/login" element={
+          isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />
         } />
 
         {/* Standalone protected routes (no bottom nav) */}
@@ -94,7 +94,17 @@ export default function App() {
             <ProjectCreatePage />
           </ProtectedRoute>
         } />
-        <Route path="/quote/new" element={
+        <Route path="/daily-report" element={
+          <ProtectedRoute>
+            <DailyReportPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/capture/photo" element={
+          <ProtectedRoute>
+            <PhotoCapturePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/quick-quote" element={
           <ProtectedRoute>
             <QuickQuotePage />
           </ProtectedRoute>
@@ -109,19 +119,19 @@ export default function App() {
             <PMDashboardPage />
           </ProtectedRoute>
         } />
-        <Route path="/po/new" element={
+        <Route path="/purchase-order" element={
           <ProtectedRoute>
             <PurchaseOrderPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/deliveries" element={
-          <ProtectedRoute>
-            <DeliveriesPage />
           </ProtectedRoute>
         } />
         <Route path="/look-ahead" element={
           <ProtectedRoute>
             <LookAheadPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/deliveries" element={
+          <ProtectedRoute>
+            <DeliveriesPage />
           </ProtectedRoute>
         } />
         <Route path="/suggestions" element={
@@ -130,60 +140,37 @@ export default function App() {
           </ProtectedRoute>
         } />
 
-        {/* Protected routes with MainLayout */}
+        {/* Routes with bottom navigation */}
         <Route element={<ProtectedMainLayout />}>
-          {/* Main navigation */}
           <Route path="/today" element={<TodayPage />} />
           <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/documents" element={<DocumentsPage />} />
-          <Route path="/more" element={<MorePage />} />
-
-          {/* Capture flows */}
-          <Route path="/capture/photo" element={<PhotoCapturePage />} />
-          <Route path="/capture/change" element={<PlaceholderPage title="Log Issue" />} />
-          <Route path="/capture/rfi" element={<PlaceholderPage title="Create RFI" />} />
-
-          {/* Daily Report Wizard */}
-          <Route path="/daily-report" element={<DailyReportPage />} />
-
-          {/* Projects */}
           <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/projects/:id" element={<PlaceholderPage title="Project Details" />} />
+          <Route path="/documents" element={<DocumentsPage />} />
           <Route path="/photos" element={<PhotosPage />} />
-
-          {/* Logistics */}
-          <Route path="/constraints" element={<PlaceholderPage title="Constraints" />} />
-
-          {/* Quality */}
+          <Route path="/more" element={<MorePage />} />
+          <Route path="/rfi/new" element={<PlaceholderPage title="New RFI" />} />
           <Route path="/punch-list" element={<PlaceholderPage title="Punch List" />} />
-          <Route path="/checklists" element={<PlaceholderPage title="Checklists" />} />
-
-          {/* Controls */}
-          <Route path="/decisions" element={<PlaceholderPage title="Decision Log" />} />
-          <Route path="/changes" element={<PlaceholderPage title="Change Tracking" />} />
-
-          {/* Service */}
-          <Route path="/service-calls" element={<PlaceholderPage title="Service Calls" />} />
-
-          {/* Profile & Help */}
-          <Route path="/profile" element={<PlaceholderPage title="Profile" />} />
-          <Route path="/notifications" element={<PlaceholderPage title="Notifications" />} />
+          <Route path="/changes" element={<PlaceholderPage title="Change Orders" />} />
+          <Route path="/contacts" element={<PlaceholderPage title="Contacts" />} />
+          <Route path="/reports" element={<PlaceholderPage title="Reports" />} />
           <Route path="/help" element={<PlaceholderPage title="Help & Support" />} />
           <Route path="/timecard" element={<PlaceholderPage title="Time Card" />} />
         </Route>
 
         {/* Root redirect */}
         <Route path="/" element={
-          <Navigate to={isOnboarded ? "/dashboard" : "/onboarding"} replace />
+          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
         } />
         <Route path="/home" element={<Navigate to="/dashboard" replace />} />
         
-        {/* Legacy routes - redirect to onboarding */}
-        <Route path="/login" element={<Navigate to="/onboarding" replace />} />
-        <Route path="/register" element={<Navigate to="/onboarding" replace />} />
+        {/* Legacy routes - redirect to login */}
+        <Route path="/onboarding" element={<Navigate to="/login" replace />} />
+        <Route path="/register" element={<Navigate to="/login" replace />} />
 
         {/* Catch all */}
         <Route path="*" element={
-          <Navigate to={isOnboarded ? "/dashboard" : "/onboarding"} replace />
+          <Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />
         } />
       </Routes>
     </BrowserRouter>
