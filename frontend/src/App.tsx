@@ -13,6 +13,7 @@ import { OnboardingPage } from './pages/OnboardingPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { TeamSetupPage } from './pages/TeamSetupPage';
+import { SuggestionsPage } from './pages/SuggestionsPage';
 
 // Main pages
 import { TodayPage } from './pages/TodayPage';
@@ -69,7 +70,7 @@ export default function App() {
       <Routes>
         {/* Onboarding (first-time setup) */}
         <Route path="/onboarding" element={
-          isOnboarded ? <Navigate to="/today" replace /> : <OnboardingPage />
+          isOnboarded ? <Navigate to="/dashboard" replace /> : <OnboardingPage />
         } />
 
         {/* Standalone protected routes (no bottom nav) */}
@@ -123,6 +124,11 @@ export default function App() {
             <LookAheadPage />
           </ProtectedRoute>
         } />
+        <Route path="/suggestions" element={
+          <ProtectedRoute>
+            <SuggestionsPage />
+          </ProtectedRoute>
+        } />
 
         {/* Protected routes with MainLayout */}
         <Route element={<ProtectedMainLayout />}>
@@ -167,9 +173,9 @@ export default function App() {
 
         {/* Root redirect */}
         <Route path="/" element={
-          <Navigate to={isOnboarded ? "/today" : "/onboarding"} replace />
+          <Navigate to={isOnboarded ? "/dashboard" : "/onboarding"} replace />
         } />
-        <Route path="/home" element={<Navigate to="/today" replace />} />
+        <Route path="/home" element={<Navigate to="/dashboard" replace />} />
         
         {/* Legacy routes - redirect to onboarding */}
         <Route path="/login" element={<Navigate to="/onboarding" replace />} />
@@ -177,7 +183,7 @@ export default function App() {
 
         {/* Catch all */}
         <Route path="*" element={
-          <Navigate to={isOnboarded ? "/today" : "/onboarding"} replace />
+          <Navigate to={isOnboarded ? "/dashboard" : "/onboarding"} replace />
         } />
       </Routes>
     </BrowserRouter>

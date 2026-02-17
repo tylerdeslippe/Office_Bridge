@@ -19,6 +19,9 @@ from app.api import (
     contacts_router,
     quotes_router,
     files_router,
+    companies_router,
+    developer_router,
+    feedback_router,
     rfi_router,
     change_router,
     punch_router,
@@ -67,6 +70,8 @@ app = FastAPI(
     - **Constraints**: Weekly look-ahead planning with constraint tracking
     - **Decision Log**: Proof of decisions for dispute prevention
     - **Service Dispatch**: Callback and service work management
+    - **Company Sync**: Team data synchronization across devices
+    - **Beta Feedback**: In-app feedback collection
     """,
     lifespan=lifespan
 )
@@ -93,6 +98,9 @@ app.include_router(photos_router, prefix=settings.API_V1_PREFIX)
 app.include_router(contacts_router, prefix=settings.API_V1_PREFIX)
 app.include_router(quotes_router, prefix=settings.API_V1_PREFIX)
 app.include_router(files_router, prefix=settings.API_V1_PREFIX)
+app.include_router(companies_router, prefix=settings.API_V1_PREFIX)
+app.include_router(developer_router, prefix=settings.API_V1_PREFIX)
+app.include_router(feedback_router, prefix=settings.API_V1_PREFIX)
 app.include_router(rfi_router, prefix=settings.API_V1_PREFIX)
 app.include_router(change_router, prefix=settings.API_V1_PREFIX)
 app.include_router(punch_router, prefix=settings.API_V1_PREFIX)

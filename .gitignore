@@ -1,0 +1,142 @@
+############################################
+# OS / File Explorer junk
+############################################
+.DS_Store
+.DS_Store?
+.AppleDouble
+.LSOverride
+
+Thumbs.db
+ehthumbs.db
+Icon?
+[Dd]esktop.ini
+
+$RECYCLE.BIN/
+.System Volume Information/
+
+############################################
+# Logs
+############################################
+*.log
+logs/
+log/
+
+############################################
+# Secrets / env files
+############################################
+.env
+.env.*
+!.env.example
+!.env.template
+
+############################################
+# Python
+############################################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Packaging / build
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+wheels/
+
+# Unit test / coverage / type check caches
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.pyre/
+.pytype/
+.ruff_cache/
+
+############################################
+# Jupyter / notebooks
+############################################
+.ipynb_checkpoints/
+
+############################################
+# Node / Frontend (React/Vite/Next/etc.)
+############################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.cache/
+
+############################################
+# IDE / Editor
+############################################
+.vscode/
+.idea/
+*.iml
+
+############################################
+# Local tooling / misc
+############################################
+*.swp
+*.swo
+*~
+.tmp/
+temp/
+
+############################################
+# Databases / local data dumps
+############################################
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+*.dump
+
+############################################
+# Docker
+############################################
+*.pid
+docker-data/
+.docker/
+
+############################################
+# Railway (local state)
+############################################
+.railway/
+
+############################################
+# Terraform (if you ever add it)
+############################################
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+# Python cache
+__pycache__/
+*.pyc
+
+# Local DB
+*.db
+*.sqlite
+*.sqlite3

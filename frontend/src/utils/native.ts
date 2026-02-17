@@ -61,8 +61,8 @@ export const camera = {
       const photos = await Camera.pickImages({
         quality: 80,
       });
-      return photos.photos.map(p => 
-        p.base64String ? `data:image/jpeg;base64,${p.base64String}` : ''
+      return photos.photos.map((p: any) => 
+        p.base64String ? `data:image/jpeg;base64,${p.base64String}` : (p.webPath || '')
       ).filter(Boolean);
     } catch (error) {
       console.error('Pick multiple error:', error);

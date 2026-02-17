@@ -1,6 +1,7 @@
 """
 Office Bridge - Database Models
 Comprehensive models for field-to-office construction management
+With Company sync and Developer accounts for beta testing
 """
 from datetime import datetime
 from typing import Optional, List
@@ -28,6 +29,13 @@ class UserRole(str, enum.Enum):
     SERVICE_DISPATCHER = "service_dispatcher"
     ADMIN = "admin"
     FIELD_WORKER = "field_worker"
+    DEVELOPER = "developer"  # Full access for testing
+
+
+class CompanyRole(str, enum.Enum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
 
 
 class TaskStatus(str, enum.Enum):
@@ -99,6 +107,123 @@ project_users = Table(
     Column('user_id', Integer, ForeignKey('users.id'), primary_key=True)
 )
 
+company_users = Table(
+    'company_users',
+    Base.metadata,
+    Column('company_id', Integer, ForeignKey('companies.id'), primary_key=True),
+    Column('user_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('role', Enum(CompanyRole), default=CompanyRole.MEMBER),
+    Column('joined_at', DateTime, default=datetime.utcnow)
+)
+
+
+# ============================================
+# COMPANY MODEL
+# ============================================
+
+class Company(Base):
+    """Company/Organization for team sync"""
+    __tablename__ = "companies"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    code = Column(String(20), unique=True, index=True)  # Short code for joining
+    invite_code = Column(String(50), unique=True, index=True)  # Invite link code
+    
+    # Company details
+    address = Column(String(255))
+    city = Column(String(100))
+    state = Column(String(50))
+    zip_code = Column(String(20))
+    phone = Column(String(20))
+    email = Column(String(255))
+    website = Column(String(255))
+    logo_url = Column(String(500))
+    
+    # Settings
+    settings = Column(JSON, default={})
+    
+    # Subscription/limits
+    max_users = Column(Integer, default=10)
+    max_projects = Column(Integer, default=50)
+    storage_limit_gb = Column(Float, default=5.0)
+    storage_used_gb = Column(Float, default=0.0)
+    
+    # Beta testing
+    is_beta = Column(Boolean, default=True)
+    beta_features = Column(JSON, default=[])
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Owner
+    owner_id = Column(Integer, ForeignKey('users.id'))
+    
+    # Relationships
+    members = relationship("User", secondary=company_users, backref="companies")
+    projects = relationship("Project", back_populates="company")
+
+
+# ============================================
+# BETA FEEDBACK MODEL
+# ============================================
+
+class BetaFeedback(Base):
+    """Feedback from beta testers"""
+    __tablename__ = "beta_feedback"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    company_id = Column(Integer, ForeignKey('companies.id'))
+    
+    type = Column(String(50))  # feature, bug, general
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    priority = Column(String(20))  # low, medium, high
+    
+    # Developer response
+    status = Column(String(50), default='submitted')  # submitted, reviewed, planned, completed, wont_fix
+    dev_notes = Column(Text)
+    dev_response = Column(Text)
+    
+    # Metadata
+    app_version = Column(String(20))
+    device_info = Column(JSON)
+    screenshots = Column(JSON, default=[])
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    responded_at = Column(DateTime)
+    
+    # Relationships
+    user = relationship("User", backref="feedback")
+
+
+# ============================================
+# SYNC LOG MODEL
+# ============================================
+
+class SyncLog(Base):
+    """Track sync operations for debugging"""
+    __tablename__ = "sync_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'))
+    company_id = Column(Integer, ForeignKey('companies.id'))
+    
+    action = Column(String(50))  # push, pull, conflict
+    entity_type = Column(String(50))  # project, task, delivery, etc.
+    entity_id = Column(String(100))
+    
+    status = Column(String(20))  # success, failed, conflict
+    error_message = Column(Text)
+    data_snapshot = Column(JSON)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 
 # ============================================
 # CORE MODELS
@@ -117,6 +242,19 @@ class User(Base):
     role = Column(Enum(UserRole), nullable=False, default=UserRole.FIELD_WORKER)
     is_active = Column(Boolean, default=True)
     profile_photo_url = Column(String(500))
+    
+    # Developer/Admin flags
+    is_developer = Column(Boolean, default=False)  # Full access for testing
+    is_superadmin = Column(Boolean, default=False)  # System admin
+    
+    # Company
+    primary_company_id = Column(Integer, ForeignKey('companies.id'))
+    
+    # Device/App info for sync
+    device_id = Column(String(255))
+    push_token = Column(String(500))
+    app_version = Column(String(20))
+    last_sync_at = Column(DateTime)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -144,6 +282,10 @@ class Project(Base):
     number = Column(String(50), unique=True, index=True)  # Job number
     description = Column(Text)
     status = Column(Enum(ProjectStatus), default=ProjectStatus.PLANNING)
+    
+    # Company ownership
+    company_id = Column(Integer, ForeignKey("companies.id"))
+    company = relationship("Company", back_populates="projects")
     
     # Location
     address = Column(String(255))

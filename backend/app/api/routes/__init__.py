@@ -6,6 +6,9 @@ from app.api.routes.photos import router as photos_router
 from app.api.routes.contacts import router as contacts_router
 from app.api.routes.quotes import router as quotes_router
 from app.api.routes.files import router as files_router
+from app.api.routes.companies import router as companies_router
+from app.api.routes.developer import router as developer_router
+from app.api.routes.feedback import router as feedback_router
 from app.api.routes.entities import (
     rfi_router,
     change_router,
@@ -26,6 +29,9 @@ __all__ = [
     "contacts_router",
     "quotes_router",
     "files_router",
+    "companies_router",
+    "developer_router",
+    "feedback_router",
     "rfi_router",
     "change_router",
     "punch_router",

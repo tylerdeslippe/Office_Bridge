@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   FileText,
   Plus,
+  DollarSign,
 } from 'lucide-react';
 import { useAppStore } from '../contexts/appStore';
 import { useAuthStore } from '../contexts/authStore';
@@ -387,7 +388,7 @@ export function RFICreatePage() {
                   : 'border-gray-200'
               }`}
             >
-              <div className="text-2xl mb-1">💰</div>
+              <DollarSign size={24} className={`mb-1 ${formData.cost_impact ? 'text-red-600' : 'text-gray-400'}`} />
               <div className={`font-medium text-sm ${
                 formData.cost_impact ? 'text-red-700' : 'text-gray-600'
               }`}>
@@ -408,7 +409,7 @@ export function RFICreatePage() {
                   : 'border-gray-200'
               }`}
             >
-              <div className="text-2xl mb-1">📅</div>
+              <Calendar size={24} className={`mb-1 ${formData.schedule_impact ? 'text-orange-600' : 'text-gray-400'}`} />
               <div className={`font-medium text-sm ${
                 formData.schedule_impact ? 'text-orange-700' : 'text-gray-600'
               }`}>

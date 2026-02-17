@@ -25,6 +25,7 @@ import {
   LayoutDashboard,
   ShoppingCart,
   LayoutGrid,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { useAuthStore } from '../contexts/localAuthStore';
 import { useAppStore } from '../contexts/appStore';
@@ -90,6 +91,13 @@ const menuSections: MenuSection[] = [
     title: 'Service',
     items: [
       { icon: Phone, label: 'Service Calls', to: '/service-calls' },
+    ],
+  },
+  {
+    title: 'Feedback & Support',
+    items: [
+      { icon: MessageSquarePlus, label: 'Suggestions', to: '/suggestions', description: 'Request features & report bugs' },
+      { icon: HelpCircle, label: 'Help', to: '/help' },
     ],
   },
 ];

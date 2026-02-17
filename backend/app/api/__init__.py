@@ -15,6 +15,9 @@ from app.api.routes import (
     cost_code_router,
     service_router,
     files_router,
+    companies_router,
+    developer_router,
+    feedback_router,
 )
 
 __all__ = [
@@ -34,4 +37,7 @@ __all__ = [
     "cost_code_router",
     "service_router",
     "files_router",
+    "companies_router",
+    "developer_router",
+    "feedback_router",
 ]

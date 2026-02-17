@@ -71,7 +71,7 @@ export function ProjectsPage() {
   };
   
   const handleSelectProject = (project: Project) => {
-    setCurrentProject(project);
+    setCurrentProject(project as any);
   };
   
   return (

@@ -3,6 +3,9 @@
  * 
  * Uses Apple's CloudKit for device-to-device sync
  * Data is stored in iCloud and shared across user's devices + team members
+ * 
+ * Note: CloudKit is only available on native iOS. This service gracefully
+ * handles the web/browser case by returning false/empty results.
  */
 
 import { localDB, STORES, StoreName } from '../utils/localDB';
@@ -30,15 +33,20 @@ export interface Company {
   createdAt: string;
 }
 
-// CloudKit interface (will be provided by native plugin)
-interface CloudKitPlugin {
-  configure(options: { containerIdentifier: string }): Promise<void>;
-  getAccountStatus(): Promise<{ accountStatus: string }>;
-  createRecordZone(options: { zoneName: string; database: string }): Promise<{ zoneName: string }>;
-  saveRecord(options: any): Promise<{ recordName: string }>;
-  queryRecords(options: any): Promise<{ records: any[] }>;
-  fetchRecord(options: any): Promise<{ record: any }>;
-  createShare(options: any): Promise<{ shareUrl: string }>;
+// CloudKit plugin will be injected by native iOS code
+// Access via window.CloudKitPlugin when available
+declare global {
+  interface Window {
+    CloudKitPlugin?: {
+      configure(options: { containerIdentifier: string }): Promise<void>;
+      getAccountStatus(): Promise<{ accountStatus: string }>;
+      createRecordZone(options: { zoneName: string; database: string }): Promise<{ zoneName: string }>;
+      saveRecord(options: any): Promise<{ recordName: string }>;
+      queryRecords(options: any): Promise<{ records: any[] }>;
+      fetchRecord(options: any): Promise<{ record: any }>;
+      createShare(options: any): Promise<{ shareUrl: string }>;
+    };
+  }
 }
 
 class CloudKitService {
@@ -46,22 +54,14 @@ class CloudKitService {
   private isSignedIn = false;
   private containerIdentifier = 'iCloud.com.faithfulandtrue.officebridge';
   private companyShareZone: string | null = null;
-  private cloudKit: CloudKitPlugin | null = null;
   
   async init(): Promise<boolean> {
-    if (typeof window !== 'undefined' && (window as any).Capacitor?.isNativePlatform()) {
+    // Check if running on iOS with CloudKit available
+    if (typeof window !== 'undefined' && window.CloudKitPlugin) {
       try {
-        // Dynamic import for CloudKit plugin
-        const module = await import('@capacitor-community/cloudkit' as any).catch(() => null);
-        if (!module) {
-          console.log('CloudKit plugin not available');
-          return false;
-        }
+        await window.CloudKitPlugin.configure({ containerIdentifier: this.containerIdentifier });
         
-        this.cloudKit = module.CloudKit;
-        await this.cloudKit!.configure({ containerIdentifier: this.containerIdentifier });
-        
-        const status = await this.cloudKit!.getAccountStatus();
+        const status = await window.CloudKitPlugin.getAccountStatus();
         this.isSignedIn = status.accountStatus === 'available';
         this.isAvailable = true;
         
@@ -69,14 +69,16 @@ class CloudKitService {
           await this.loadCompanyZone();
         }
         
-        console.log('☁️ CloudKit initialized:', { isSignedIn: this.isSignedIn });
+        console.log('CloudKit initialized:', { isSignedIn: this.isSignedIn });
         return this.isSignedIn;
       } catch (error) {
-        console.log('CloudKit not available:', error);
+        console.log('CloudKit initialization failed:', error);
         this.isAvailable = false;
         return false;
       }
     }
+    
+    console.log('CloudKit not available (running in browser or plugin not installed)');
     return false;
   }
   
@@ -85,9 +87,9 @@ class CloudKitService {
   }
   
   async getAccountStatus(): Promise<'available' | 'noAccount' | 'restricted' | 'unknown'> {
-    if (!this.isAvailable || !this.cloudKit) return 'unknown';
+    if (!this.isAvailable || !window.CloudKitPlugin) return 'unknown';
     try {
-      const status = await this.cloudKit.getAccountStatus();
+      const status = await window.CloudKitPlugin.getAccountStatus();
       return status.accountStatus as any;
     } catch {
       return 'unknown';
@@ -95,10 +97,10 @@ class CloudKitService {
   }
   
   async createCompany(name: string): Promise<Company | null> {
-    if (!this.isReady() || !this.cloudKit) return null;
+    if (!this.isReady() || !window.CloudKitPlugin) return null;
     
     try {
-      const zoneResult = await this.cloudKit.createRecordZone({
+      const zoneResult = await window.CloudKitPlugin.createRecordZone({
         zoneName: `company_${Date.now()}`,
         database: 'shared',
       });
@@ -111,7 +113,7 @@ class CloudKitService {
         createdAt: new Date().toISOString(),
       };
       
-      await this.cloudKit.saveRecord({
+      await window.CloudKitPlugin.saveRecord({
         recordType: RECORD_TYPES.COMPANY,
         recordName: company.id,
         zoneName: zoneResult.zoneName,
@@ -122,7 +124,7 @@ class CloudKitService {
         },
       });
       
-      const shareResult = await this.cloudKit.createShare({
+      const shareResult = await window.CloudKitPlugin.createShare({
         recordName: company.id,
         zoneName: zoneResult.zoneName,
         database: 'shared',
@@ -154,7 +156,7 @@ class CloudKitService {
   }
   
   async syncRecord(store: StoreName, recordType: string, data: any): Promise<boolean> {
-    if (!this.isReady() || !this.companyShareZone || !this.cloudKit) {
+    if (!this.isReady() || !this.companyShareZone || !window.CloudKitPlugin) {
       await this.queueForSync(store, data);
       return false;
     }
@@ -162,7 +164,7 @@ class CloudKitService {
     try {
       const fields = this.dataToFields(data);
       
-      await this.cloudKit.saveRecord({
+      await window.CloudKitPlugin.saveRecord({
         recordType,
         recordName: data.id,
         zoneName: this.companyShareZone,
@@ -180,10 +182,10 @@ class CloudKitService {
   }
   
   async fetchRecords(recordType: string): Promise<any[]> {
-    if (!this.isReady() || !this.companyShareZone || !this.cloudKit) return [];
+    if (!this.isReady() || !this.companyShareZone || !window.CloudKitPlugin) return [];
     
     try {
-      const result = await this.cloudKit.queryRecords({
+      const result = await window.CloudKitPlugin.queryRecords({
         recordType,
         zoneName: this.companyShareZone,
         database: 'shared',
@@ -230,7 +232,7 @@ class CloudKitService {
         for (const record of remoteRecords) {
           const local = await localDB.getById(store, record.id) as any;
           if (!local || (record.updatedAt && local.updatedAt && new Date(record.updatedAt) > new Date(local.updatedAt))) {
-            await localDB.put(store, { ...record, _needsSync: false }, false);
+            await localDB.put(store, { ...record, _needsSync: false } as any, false);
             synced++;
           }
         }
@@ -244,13 +246,13 @@ class CloudKitService {
   }
   
   private async queueForSync(store: StoreName, data: any): Promise<void> {
-    await localDB.put(store, { ...data, _needsSync: true }, false);
+    await localDB.put(store, { ...data, _needsSync: true } as any, false);
   }
   
   private async markSynced(store: StoreName, id: string): Promise<void> {
     const record = await localDB.getById(store, id);
     if (record) {
-      await localDB.put(store, { ...record, _needsSync: false, _lastSyncedAt: new Date().toISOString() }, false);
+      await localDB.put(store, { ...record, _needsSync: false, _lastSyncedAt: new Date().toISOString() } as any, false);
     }
   }
   
@@ -292,10 +294,10 @@ class CloudKitService {
   }
   
   async uploadAsset(recordId: string, fieldName: string, base64Data: string, mimeType: string): Promise<string | null> {
-    if (!this.isReady() || !this.companyShareZone || !this.cloudKit) return null;
+    if (!this.isReady() || !this.companyShareZone || !window.CloudKitPlugin) return null;
     
     try {
-      const result = await this.cloudKit.saveRecord({
+      const result = await window.CloudKitPlugin.saveRecord({
         recordType: RECORD_TYPES.PHOTO,
         recordName: recordId,
         zoneName: this.companyShareZone,
@@ -311,10 +313,10 @@ class CloudKitService {
   }
   
   async downloadAsset(recordId: string, fieldName: string): Promise<string | null> {
-    if (!this.isReady() || !this.companyShareZone || !this.cloudKit) return null;
+    if (!this.isReady() || !this.companyShareZone || !window.CloudKitPlugin) return null;
     
     try {
-      const result = await this.cloudKit.fetchRecord({
+      const result = await window.CloudKitPlugin.fetchRecord({
         recordName: recordId,
         zoneName: this.companyShareZone,
         database: 'shared',

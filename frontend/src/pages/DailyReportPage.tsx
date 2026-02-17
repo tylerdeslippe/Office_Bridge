@@ -682,14 +682,14 @@ export function DailyReportPage() {
 
               {data.problemsEncountered && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                  <div className="text-amber-700 font-medium mb-1">⚠️ Problems Reported</div>
+                  <div className="text-amber-700 font-medium mb-1 flex items-center gap-1"><AlertTriangle size={14} /> Problems Reported</div>
                   <div className="text-amber-800">{data.problemsEncountered}</div>
                 </div>
               )}
 
               {data.rfiRequired && (
                 <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-sm">
-                  <div className="text-purple-700 font-medium mb-1">📋 RFI Required</div>
+                  <div className="text-purple-700 font-medium mb-1 flex items-center gap-1"><FileQuestion size={14} /> RFI Required</div>
                   <div className="text-purple-800">{data.rfiDescription || 'Details to follow'}</div>
                 </div>
               )}

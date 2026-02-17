@@ -9,7 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   ChevronLeft, ChevronRight, MapPin, Camera, Upload,
   Check, Loader2, AlertTriangle, X, Plus, Info, Copy, Building2, Clock, Search,
-  ClipboardPaste, Building, Home, Hotel, GraduationCap, ShoppingBag, Factory, Layers
+  ClipboardPaste, Building, Home, Hotel, GraduationCap, ShoppingBag, Factory, Layers,
+  ClipboardList, BarChart3
 } from 'lucide-react';
 import { useAppStore } from '../contexts/appStore';
 import { projectsApi, siteLocationsApi, customersApi, vendorsApi } from '../utils/api';
@@ -758,7 +759,7 @@ export function ProjectCreatePage() {
           </button>
           <button onClick={() => setSetupMode('full')} className="w-full p-6 bg-white rounded-xl border-2 border-gray-200 text-left hover:border-blue-300 transition-colors">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0"><span className="text-2xl">📋</span></div>
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0"><ClipboardList size={24} className="text-green-600" /></div>
               <div className="flex-1">
                 <h3 className="font-semibold text-lg text-gray-900">Full Setup</h3>
                 <p className="text-sm text-green-600 font-medium mb-2">For Project Managers • 5-10 minutes</p>
@@ -1510,7 +1511,7 @@ export function ProjectCreatePage() {
             <button onClick={() => updateField('commissioning_required', !formData.commissioning_required)}
               className={`w-full p-4 rounded-xl border-2 ${formData.commissioning_required ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
               <div className="flex items-center gap-4">
-                <div className="text-2xl">📊</div>
+                <BarChart3 size={24} className={formData.commissioning_required ? 'text-green-600' : 'text-gray-400'} />
                 <div className="flex-1 text-left">
                   <div className="font-medium">Commissioning Required</div>
                   <div className="text-sm text-gray-500">{formData.commissioning_required ? 'TAB & startup included' : 'Tap to enable'}</div>

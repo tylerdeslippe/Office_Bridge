@@ -224,7 +224,8 @@ export function TasksPage() {
       setTasks(prev => prev.map(t => 
         t.id === taskId ? { ...t, status: 'acknowledged' as const } : t
       ));
-      setUnacknowledgedTasks(prev => Math.max(0, prev - 1));
+      const currentCount = useAppStore.getState().unacknowledgedTasks;
+      setUnacknowledgedTasks(Math.max(0, currentCount - 1));
       showToast('Task acknowledged', 'success');
     } catch (err: any) {
       console.error('Failed to acknowledge task:', err);

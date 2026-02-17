@@ -136,8 +136,8 @@ export function TodayPage() {
         // Fetch unresolved constraints
         const constraintsResponse = await constraintsApi.list({ 
           project_id: currentProject.id, 
-          status: 'open' 
-        });
+          is_resolved: false
+        } as any);
         if (abortController.signal.aborted) return;
         
         const openConstraints = Array.isArray(constraintsResponse.data) ? constraintsResponse.data : [];
@@ -244,8 +244,8 @@ export function TodayPage() {
     try {
       const constraintsResponse = await constraintsApi.list({ 
         project_id: currentProject.id, 
-        status: 'open' 
-      });
+        is_resolved: false
+      } as any);
       const openConstraints = Array.isArray(constraintsResponse.data) ? constraintsResponse.data : [];
       if (openConstraints.length > 0) {
         newBlockers.push({

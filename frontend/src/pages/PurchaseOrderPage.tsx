@@ -93,7 +93,7 @@ export function PurchaseOrderPage() {
     jobNumber: currentProject?.number || '',
     jobName: currentProject?.name || '',
     
-    shipToAddress: currentProject?.address || '',
+    shipToAddress: (currentProject as any)?.address || '',
     shipToCity: '',
     shipToState: 'FL',
     shipToZip: '',
