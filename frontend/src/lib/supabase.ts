@@ -1,17 +1,17 @@
 /**
  * Supabase Client Configuration
- * Handles authentication and database connections
+ * Uses the new publishable key format
  */
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://lmuudmxemkmqutcdvhmh.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseAnonKey) {
-  console.warn('Supabase anon key not found. Please set VITE_SUPABASE_ANON_KEY in your .env file');
+if (!supabaseKey) {
+  console.warn('Supabase key not found. Please set VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY in your .env file');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
