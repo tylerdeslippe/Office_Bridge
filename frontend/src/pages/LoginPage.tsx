@@ -1,6 +1,6 @@
 /**
- * Login Page - Clean minimal design
- * Single scrolling page with dark/light mode support
+ * Login Page - Supabase Authentication
+ * Clean minimal design with dark/light mode
  */
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,13 +14,13 @@ import {
   ArrowRight,
   User,
 } from 'lucide-react';
-import { useAuthStore } from '../contexts/localAuthStore';
+import { useAuthStore } from '../contexts/authStore';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'forgot';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login, register } = useAuthStore();
+  const { login, register, resetPassword, isLoading: authLoading } = useAuthStore();
   
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
@@ -32,6 +32,7 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   
   // Detect dark mode
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -48,13 +49,14 @@ export function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     setIsLoading(true);
 
     try {
       if (mode === 'login') {
         await login(email, password);
         navigate('/dashboard');
-      } else {
+      } else if (mode === 'register') {
         if (password !== confirmPassword) {
           setError('Passwords do not match');
           setIsLoading(false);
@@ -84,6 +86,10 @@ export function LoginPage() {
           companyCode,
         });
         navigate('/dashboard');
+      } else if (mode === 'forgot') {
+        await resetPassword(email);
+        setMessage('Check your email for a password reset link');
+        setMode('login');
       }
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
@@ -113,7 +119,9 @@ export function LoginPage() {
           
           {/* Tagline */}
           <p className={`text-lg ${textMuted} mb-12 text-center`}>
-            {mode === 'login' ? 'Welcome back' : 'Create your account'}
+            {mode === 'login' ? 'Welcome back' : 
+             mode === 'register' ? 'Create your account' :
+             'Reset your password'}
           </p>
         </div>
 
@@ -122,6 +130,12 @@ export function LoginPage() {
           {error && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-500 text-sm text-center">
               {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl text-green-500 text-sm text-center">
+              {message}
             </div>
           )}
 
@@ -168,25 +182,27 @@ export function LoginPage() {
               />
             </div>
 
-            {/* Password */}
-            <div className="relative">
-              <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`w-full pl-12 pr-12 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
-                placeholder="Password"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className={`absolute right-4 top-1/2 -translate-y-1/2 ${textMuted}`}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
+            {mode !== 'forgot' && (
+              /* Password */
+              <div className="relative">
+                <Lock size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${textMuted}`} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`w-full pl-12 pr-12 py-4 ${inputBg} ${inputText} border rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none`}
+                  placeholder="Password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 ${textMuted}`}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            )}
 
             {mode === 'register' && (
               <>
@@ -232,14 +248,16 @@ export function LoginPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || authLoading}
               className="w-full py-4 bg-blue-500 text-white rounded-2xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
             >
-              {isLoading ? (
+              {isLoading || authLoading ? (
                 <Loader2 size={20} className="animate-spin" />
               ) : (
                 <>
-                  {mode === 'login' ? 'Sign In' : 'Create Account'}
+                  {mode === 'login' ? 'Sign In' : 
+                   mode === 'register' ? 'Create Account' :
+                   'Send Reset Link'}
                   <ArrowRight size={18} />
                 </>
               )}
@@ -248,19 +266,33 @@ export function LoginPage() {
 
           {/* Mode Toggle */}
           <div className="mt-8 text-center">
-            <p className={textMuted}>
-              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
-            </p>
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-              className="text-blue-500 font-semibold mt-1"
-            >
-              {mode === 'login' ? 'Create Account' : 'Sign In'}
-            </button>
+            {mode === 'forgot' ? (
+              <button
+                onClick={() => { setMode('login'); setError(''); setMessage(''); }}
+                className="text-blue-500 font-semibold"
+              >
+                Back to Sign In
+              </button>
+            ) : (
+              <>
+                <p className={textMuted}>
+                  {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}
+                </p>
+                <button
+                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
+                  className="text-blue-500 font-semibold mt-1"
+                >
+                  {mode === 'login' ? 'Create Account' : 'Sign In'}
+                </button>
+              </>
+            )}
           </div>
 
           {mode === 'login' && (
-            <button className={`w-full mt-6 text-sm ${textMuted}`}>
+            <button 
+              onClick={() => { setMode('forgot'); setError(''); }}
+              className={`w-full mt-6 text-sm ${textMuted}`}
+            >
               Forgot password?
             </button>
           )}

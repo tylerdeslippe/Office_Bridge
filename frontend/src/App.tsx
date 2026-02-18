@@ -1,12 +1,11 @@
 /**
  * Office Bridge - Main App Router
- * Field-to-Office Construction Management
- * 
- * Server authentication with local data storage
+ * With Supabase Authentication
  */
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
-import { useAuthStore } from './contexts/localAuthStore';
+import { useAuthStore } from './contexts/authStore';
 
 // Auth
 import { LoginPage } from './pages/LoginPage';
@@ -34,6 +33,20 @@ import { DeliveriesPage } from './pages/DeliveriesPage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { PhotosPage } from './pages/PhotosPage';
 
+// Loading spinner
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-white mb-4">
+          <span className="text-blue-500">Office</span>Bridge
+        </h1>
+        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    </div>
+  );
+}
+
 // Placeholder component for routes not yet implemented
 function PlaceholderPage({ title }: { title: string }) {
   return (
@@ -44,26 +57,48 @@ function PlaceholderPage({ title }: { title: string }) {
   );
 }
 
-// Protected route wrapper - redirects to login if not authenticated
+// Protected route wrapper
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+  
   return <>{children}</>;
 }
 
 // Protected MainLayout wrapper
 function ProtectedMainLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+  
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+  
   return <MainLayout />;
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading, initialize } = useAuthStore();
+
+  // Initialize auth on app load
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  // Show loading while checking auth
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <BrowserRouter>
@@ -164,9 +199,10 @@ export default function App() {
         } />
         <Route path="/home" element={<Navigate to="/dashboard" replace />} />
         
-        {/* Legacy routes - redirect to login */}
+        {/* Legacy routes */}
         <Route path="/onboarding" element={<Navigate to="/login" replace />} />
         <Route path="/register" element={<Navigate to="/login" replace />} />
+        <Route path="/reset-password" element={<PlaceholderPage title="Reset Password" />} />
 
         {/* Catch all */}
         <Route path="*" element={
