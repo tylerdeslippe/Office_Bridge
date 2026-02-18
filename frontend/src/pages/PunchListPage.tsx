@@ -211,7 +211,7 @@ export function PunchListPage() {
       status: 'open',
       priority: newItem.priority,
       created_at: new Date().toISOString(),
-      created_by: `${user?.first_name} ${user?.last_name}`,
+      created_by: `${user?.firstName} ${user?.lastName}`,
       photos: newItem.photos,
       due_date: null,
       completed_at: null,

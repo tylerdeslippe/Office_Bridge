@@ -528,7 +528,7 @@ export function RFICreatePage() {
         <div className="bg-gray-50 rounded-xl p-4">
           <div className="flex items-center gap-3 text-sm text-gray-600">
             <User size={18} />
-            <span>Submitted by: <strong>{user?.first_name} {user?.last_name}</strong></span>
+            <span>Submitted by: <strong>{user?.firstName} {user?.lastName}</strong></span>
           </div>
           <div className="flex items-center gap-3 text-sm text-gray-600 mt-2">
             <Calendar size={18} />

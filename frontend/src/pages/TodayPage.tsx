@@ -316,7 +316,7 @@ export function TodayPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {greeting()}, {user?.first_name || 'there'}
+              {greeting()}, {user?.firstName || 'there'}
             </h1>
             <p className="text-sm text-gray-500">
               {new Date().toLocaleDateString('en-US', { 

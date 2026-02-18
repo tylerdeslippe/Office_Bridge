@@ -284,7 +284,7 @@ export function TimecardPage() {
         <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-4 text-white">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-blue-200 text-sm">{getGreeting()}, {user?.first_name || 'Worker'}</div>
+              <div className="text-blue-200 text-sm">{getGreeting()}, {user?.firstName || 'Worker'}</div>
               <div className="text-2xl font-bold">{formatTime(currentTime)}</div>
             </div>
             <div className="text-right">

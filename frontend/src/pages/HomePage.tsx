@@ -73,7 +73,7 @@ export function HomePage() {
       <div>
         <p className="text-gray-500 text-sm">{greeting}</p>
         <h2 className="text-2xl font-bold text-gray-900">
-          {user?.first_name || 'Welcome'}
+          {user?.firstName || 'Welcome'}
         </h2>
       </div>
       

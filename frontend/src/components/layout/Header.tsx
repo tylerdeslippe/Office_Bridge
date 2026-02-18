@@ -48,10 +48,10 @@ export function Header({ title, showBack = false, rightAction }: HeaderProps) {
                 onClick={() => navigate('/profile')}
                 className="p-1 rounded-full bg-blueprint"
               >
-                {user?.profile_photo_url ? (
+                {user?.avatarUrl ? (
                   <img
-                    src={user.profile_photo_url}
-                    alt={user.first_name}
+                    src={user.avatarUrl}
+                    alt={user.firstName}
                     className="w-7 h-7 rounded-full object-cover"
                   />
                 ) : (
